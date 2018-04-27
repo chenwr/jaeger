@@ -188,20 +188,15 @@ CREATE TYPE IF NOT EXISTS ${keyspace}.dependency (
 );
 
 -- compaction strategy is intentionally different as compared to other tables due to the size of dependencies data
--- note we have to write ts twice (once as ts_index). This is because we cannot make a SASI index on the primary key
 CREATE TABLE IF NOT EXISTS ${keyspace}.dependencies (
-    ts          timestamp,
-    ts_index    timestamp,
+    ts           timestamp,
+    date_bucket  bigint,
     dependencies list<frozen<dependency>>,
-    PRIMARY KEY (ts)
-)
-    WITH compaction = {
+    PRIMARY KEY (date_bucket, ts)
+) WITH CLUSTERING ORDER BY (ts DESC)
+    AND compaction = {
         'min_threshold': '4',
         'max_threshold': '32',
         'class': 'org.apache.cassandra.db.compaction.SizeTieredCompactionStrategy'
     }
     AND default_time_to_live = ${dependencies_ttl};
-
-CREATE CUSTOM INDEX IF NOT EXISTS ON ${keyspace}.dependencies (ts_index) 
-    USING 'org.apache.cassandra.index.sasi.SASIIndex' 
-    WITH OPTIONS = {'mode': 'SPARSE'};
